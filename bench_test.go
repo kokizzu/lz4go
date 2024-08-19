@@ -84,6 +84,7 @@ var (
 	digitsLZ4 = mustLoadFile("testdata/e.txt.lz4")
 	twainLZ4  = mustLoadFile("testdata/Mark.Twain-Tom.Sawyer.txt.lz4")
 	randomLZ4 = mustLoadFile("testdata/random.data.lz4")
+	repeatLz4 = mustLoadFile("testdata/repeat.txt.lz4")
 )
 
 func benchmarkUncompress(b *testing.B, compressed []byte) {
@@ -158,5 +159,21 @@ func BenchmarkWriterReset(b *testing.B) {
 
 		_, _ = zw.Write(src)
 		_ = zw.Close()
+	}
+}
+
+func BenchmarkReaderNoReset(b *testing.B) {
+	compressed := repeatLz4
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		r := bytes.NewReader(compressed)
+		zr := lz4.NewReader(r)
+		buf := bytes.NewBuffer(nil)
+		_, err := buf.ReadFrom(zr)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
