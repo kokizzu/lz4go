@@ -2,8 +2,11 @@ package lz4_test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io"
 	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/pierrec/lz4/v4"
@@ -68,7 +71,13 @@ func BenchmarkUncompress(b *testing.B) {
 }
 
 func mustLoadFile(f string) []byte {
-	b, err := ioutil.ReadFile(f)
+	var b []byte
+	var err error
+	if strings.HasSuffix(f, ".gz") {
+		b, err = loadGoldenGz(f)
+	} else {
+		b, err = ioutil.ReadFile(f)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -76,15 +85,14 @@ func mustLoadFile(f string) []byte {
 }
 
 var (
-	pg1661    = mustLoadFile("testdata/pg1661.txt")
-	digits    = mustLoadFile("testdata/e.txt")
-	twain     = mustLoadFile("testdata/Mark.Twain-Tom.Sawyer.txt")
-	random    = mustLoadFile("testdata/random.data")
+	pg1661    = mustLoadFile("testdata/pg1661.txt.gz")
+	digits    = mustLoadFile("testdata/e.txt.gz")
+	twain     = mustLoadFile("testdata/Mark.Twain-Tom.Sawyer.txt.gz")
+	random    = mustLoadFile("testdata/random.data.gz")
 	pg1661LZ4 = mustLoadFile("testdata/pg1661.txt.lz4")
 	digitsLZ4 = mustLoadFile("testdata/e.txt.lz4")
 	twainLZ4  = mustLoadFile("testdata/Mark.Twain-Tom.Sawyer.txt.lz4")
 	randomLZ4 = mustLoadFile("testdata/random.data.lz4")
-	repeatLz4 = mustLoadFile("testdata/repeat.txt.lz4")
 )
 
 func benchmarkUncompress(b *testing.B, compressed []byte) {
@@ -162,18 +170,30 @@ func BenchmarkWriterReset(b *testing.B) {
 	}
 }
 
-func BenchmarkReaderNoReset(b *testing.B) {
-	compressed := repeatLz4
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		r := bytes.NewReader(compressed)
-		zr := lz4.NewReader(r)
-		buf := bytes.NewBuffer(nil)
-		_, err := buf.ReadFrom(zr)
-		if err != nil {
-			b.Fatal(err)
-		}
+// Golden files are compressed with gzip.
+func loadGolden(t *testing.T, fname string) []byte {
+	fname = strings.Replace(fname, ".lz4", ".gz", 1)
+	t.Helper()
+	b, err := loadGoldenGz(fname)
+	if err != nil {
+		t.Fatal(err)
 	}
+	return b
+}
+
+func loadGoldenGz(fname string) ([]byte, error) {
+	file, err := os.Open(fname)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, err
+	}
+	buf := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buf, gzr); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

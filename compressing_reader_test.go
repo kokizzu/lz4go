@@ -12,15 +12,15 @@ import (
 
 func TestCompressingReader(t *testing.T) {
 	goldenFiles := []string{
-		"testdata/e.txt",
-		"testdata/gettysburg.txt",
-		"testdata/Mark.Twain-Tom.Sawyer.txt",
-		"testdata/Mark.Twain-Tom.Sawyer_long.txt",
-		"testdata/pg1661.txt",
-		"testdata/pi.txt",
-		"testdata/random.data",
-		"testdata/repeat.txt",
-		"testdata/issue102.data",
+		"testdata/e.txt.gz",
+		"testdata/gettysburg.txt.gz",
+		"testdata/Mark.Twain-Tom.Sawyer.txt.gz",
+		"testdata/Mark.Twain-Tom.Sawyer_long.txt.gz",
+		"testdata/pg1661.txt.gz",
+		"testdata/pi.txt.gz",
+		"testdata/random.data.gz",
+		"testdata/repeat.txt.gz",
+		"testdata/issue102.data.gz",
 	}
 
 	for _, fname := range goldenFiles {

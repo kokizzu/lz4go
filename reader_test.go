@@ -83,11 +83,7 @@ func TestReader(t *testing.T) {
 				}
 				defer f.Close()
 
-				rawfile := strings.TrimSuffix(fname, ".lz4")
-				_raw, err := ioutil.ReadFile(rawfile)
-				if err != nil {
-					t.Fatal(err)
-				}
+				_raw := loadGolden(t, fname)
 				var raw []byte
 				if isText && runtime.GOOS == "windows" {
 					raw = []byte(strings.ReplaceAll(string(_raw), "\r\n", "\n"))
@@ -206,11 +202,8 @@ func TestReaderLegacy(t *testing.T) {
 				t.Parallel()
 
 				var out bytes.Buffer
-				rawfile := strings.TrimSuffix(fname, ".lz4")
-				raw, err := ioutil.ReadFile(rawfile)
-				if err != nil {
-					t.Fatal(err)
-				}
+				rawfile := strings.Replace(fname, ".lz4", ".gz", 1)
+				raw := loadGolden(t, rawfile)
 
 				f, err := os.Open(fname)
 				if err != nil {

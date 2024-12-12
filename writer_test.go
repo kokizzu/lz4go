@@ -18,16 +18,16 @@ import (
 
 func TestWriter(t *testing.T) {
 	goldenFiles := []string{
-		"testdata/empty.txt",
-		"testdata/e.txt",
-		"testdata/gettysburg.txt",
-		"testdata/Mark.Twain-Tom.Sawyer.txt",
-		"testdata/Mark.Twain-Tom.Sawyer_long.txt",
-		"testdata/pg1661.txt",
-		"testdata/pi.txt",
-		"testdata/random.data",
-		"testdata/repeat.txt",
-		"testdata/issue102.data",
+		"testdata/empty.txt.gz",
+		"testdata/e.txt.gz",
+		"testdata/gettysburg.txt.gz",
+		"testdata/Mark.Twain-Tom.Sawyer.txt.gz",
+		"testdata/Mark.Twain-Tom.Sawyer_long.txt.gz",
+		"testdata/pg1661.txt.gz",
+		"testdata/pi.txt.gz",
+		"testdata/random.data.gz",
+		"testdata/repeat.txt.gz",
+		"testdata/issue102.data.gz",
 	}
 
 	for _, fname := range goldenFiles {
@@ -144,7 +144,7 @@ func TestIssue43(t *testing.T) {
 	go func() {
 		defer w.Close()
 
-		f, err := os.Open("testdata/issue43.data")
+		f, err := os.Open("testdata/issue43.data.gz")
 		if err != nil {
 			panic(err)
 		}
@@ -165,7 +165,7 @@ func TestIssue43(t *testing.T) {
 }
 
 func TestIssue51(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/issue51.data")
+	data, err := ioutil.ReadFile("testdata/issue51.data.gz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,8 +255,8 @@ func TestWriterFlush(t *testing.T) {
 
 func TestWriterLegacy(t *testing.T) {
 	goldenFiles := []string{
-		"testdata/vmlinux_LZ4_19377",
-		"testdata/bzImage_lz4_isolated",
+		"testdata/vmlinux_LZ4_19377.gz",
+		"testdata/bzImage_lz4_isolated.gz",
 	}
 
 	for _, fname := range goldenFiles {
@@ -264,10 +264,7 @@ func TestWriterLegacy(t *testing.T) {
 			fname := fname
 			t.Parallel()
 
-			src, err := ioutil.ReadFile(fname)
-			if err != nil {
-				t.Fatal(err)
-			}
+			src := loadGolden(t, fname)
 
 			out := new(bytes.Buffer)
 			zw := lz4.NewWriter(out)
@@ -305,8 +302,8 @@ func TestWriterLegacyCommand(t *testing.T) {
 	}
 
 	goldenFiles := []string{
-		"testdata/vmlinux_LZ4_19377",
-		"testdata/bzImage_lz4_isolated",
+		"testdata/vmlinux_LZ4_19377.gz",
+		"testdata/bzImage_lz4_isolated.gz",
 	}
 
 	for _, fname := range goldenFiles {
@@ -314,10 +311,7 @@ func TestWriterLegacyCommand(t *testing.T) {
 			fname := fname
 			t.Parallel()
 
-			src, err := ioutil.ReadFile(fname)
-			if err != nil {
-				t.Fatal(err)
-			}
+			src := loadGolden(t, fname)
 
 			out := new(bytes.Buffer)
 			zw := lz4.NewWriter(out)
@@ -350,7 +344,7 @@ func TestWriterLegacyCommand(t *testing.T) {
 }
 
 func TestWriterConcurrency(t *testing.T) {
-	const someGiantFile = "testdata/vmlinux_LZ4_19377"
+	const someGiantFile = "testdata/vmlinux_LZ4_19377.gz"
 
 	out := new(bytes.Buffer)
 	zw := lz4.NewWriter(out)
