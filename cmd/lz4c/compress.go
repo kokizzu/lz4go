@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"sync/atomic"
+	"time"
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/schollz/progressbar/v3"
@@ -26,6 +29,7 @@ func Compress(fs *flag.FlagSet) cmdflag.Handler {
 	fs.UintVar(&level, "l", 0, "compression level (0=fastest)")
 	var concurrency int
 	fs.IntVar(&concurrency, "c", -1, "concurrency (default=all CPUs")
+	bench := fs.Int("bench", 0, "Run benchmark n times. No output will be written")
 
 	var lvl lz4.CompressionLevel
 	switch level {
@@ -87,6 +91,33 @@ func Compress(fs *flag.FlagSet) cmdflag.Handler {
 			if err != nil {
 				return fidx, err
 			}
+			if *bench > 0 {
+				fmt.Print("Reading ", filename, "...")
+				input, err := io.ReadAll(file)
+				if err != nil {
+					return fidx, err
+				}
+				file.Close()
+				for i := 0; i < *bench; i++ {
+					fmt.Print("\nCompressing...")
+					runtime.GC()
+					start := time.Now()
+					counter := wCounter{out: io.Discard}
+					zw.Reset(&counter)
+					_, err := io.Copy(zw, bytes.NewReader(input))
+					if err != nil {
+						return fidx, err
+					}
+					output := counter.n
+					elapsed := time.Since(start)
+					ms := elapsed.Round(time.Millisecond)
+					mbPerSec := (float64(len(input)) / 1e6) / (float64(elapsed) / (float64(time.Second)))
+					pct := float64(output) * 100 / float64(len(input))
+					fmt.Printf(" %d -> %d [%.02f%%]; %v, %.01fMB/s", len(input), output, pct, ms, mbPerSec)
+				}
+				fmt.Println("")
+				continue
+			}
 			finfo, err := file.Stat()
 			if err != nil {
 				return fidx, err
@@ -146,4 +177,15 @@ func Compress(fs *flag.FlagSet) cmdflag.Handler {
 
 		return len(args), nil
 	}
+}
+
+type wCounter struct {
+	n   int
+	out io.Writer
+}
+
+func (w *wCounter) Write(p []byte) (n int, err error) {
+	n, err = w.out.Write(p)
+	w.n += n
+	return n, err
 }
