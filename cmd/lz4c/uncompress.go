@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/schollz/progressbar/v3"
 
@@ -14,7 +17,8 @@ import (
 )
 
 // Uncompress uncompresses a set of files or from stdin to stdout.
-func Uncompress(_ *flag.FlagSet) cmdflag.Handler {
+func Uncompress(fs *flag.FlagSet) cmdflag.Handler {
+	bench := fs.Int("bench", 0, "Run benchmark n times. No output will be written")
 	return func(args ...string) (int, error) {
 		zr := lz4.NewReader(nil)
 
@@ -30,6 +34,32 @@ func Uncompress(_ *flag.FlagSet) cmdflag.Handler {
 			zfile, err := os.Open(zfilename)
 			if err != nil {
 				return fidx, err
+			}
+
+			if *bench > 0 {
+				fmt.Print("Reading ", zfilename, "...")
+				compressed, err := io.ReadAll(zfile)
+				if err != nil {
+					return fidx, err
+				}
+				zfile.Close()
+				for i := 0; i < *bench; i++ {
+					fmt.Print("\nDecompressing...")
+					runtime.GC()
+					start := time.Now()
+					zr.Reset(bytes.NewReader(compressed))
+					output, err := io.Copy(io.Discard, zr)
+					if err != nil {
+						return fidx, err
+					}
+					elapsed := time.Since(start)
+					ms := elapsed.Round(time.Millisecond)
+					mbPerSec := (float64(output) / 1e6) / (float64(elapsed) / (float64(time.Second)))
+					pct := float64(output) * 100 / float64(len(compressed))
+					fmt.Printf(" %d -> %d [%.02f%%]; %v, %.01fMB/s", len(compressed), output, pct, ms, mbPerSec)
+				}
+				fmt.Println("")
+				continue
 			}
 			zinfo, err := zfile.Stat()
 			if err != nil {
